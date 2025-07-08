@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paws & Preferences - Find Your Favourite Kitty</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 400px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #ff6b6b, #ffa726);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.5em;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 0.9em;
+        }
+
+        .card-container {
+            position: relative;
+            height: 500px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cat-card {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            cursor: grab;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .cat-card.dragging {
+            cursor: grabbing;
+            transition: none;
+        }
+
+        .cat-card.swiped-left {
+            transform: translateX(-100%) rotate(-15deg);
+            opacity: 0;
+        }
+
+        .cat-card.swiped-right {
+            transform: translateX(100%) rotate(15deg);
+            opacity: 0;
+        }
+
+        .cat-image {
+            width: 100%;
+            height: 80%;
+            object-fit: cover;
+            border-radius: 15px 15px 0 0;
+        }
+
+        .cat-info {
+            padding: 15px;
+            text-align: center;
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cat-info h3 {
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .dislike-btn {
+            background: #ff4757;
+            color: white;
+        }
+
+        .like-btn {
+            background: #2ed573;
+            color: white;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .progress {
+            background: #e0e0e0;
+            height: 4px;
+            margin: 0 20px;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #ff6b6b, #ffa726);
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+
+        .counter {
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .summary {
+            display: none;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .summary.show {
+            display: block;
+        }
+
+        .summary h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .liked-count {
+            font-size: 2em;
+            font-weight: bold;
+            color: #2ed573;
+            margin-bottom: 20px;
+        }
+
+        .liked-cats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .liked-cat-thumb {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            object-fit: cover;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .swipe-indicator {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 2em;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            pointer-events: none;
+        }
+
+        .swipe-indicator.left {
+            left: 20px;
+            color: #ff4757;
+        }
+
+        .swipe-indicator.right {
+            right: 20px;
+            color: #2ed573;
+        }
+
+        .swipe-indicator.show {
+            opacity: 1;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .card-container {
+                height: 400px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🐱 Paws & Preferences</h1>
+            <p>Find Your Favourite Kitty</p>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Loading adorable cats...</p>
+        </div>
+
+        <div class="progress" id="progress" style="display: none;">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="counter" id="counter" style="display: none;">
+            <span id="currentCount">0</span> / <span id="totalCount">0</span>
+        </div>
+
+        <div class="card-container" id="cardContainer" style="display: none;">
+            <div class="swipe-indicator left" id="leftIndicator">👎</div>
+            <div class="swipe-indicator right" id="rightIndicator">👍</div>
+        </div>
+
+        <div class="controls" id="controls" style="display: none;">
+            <button class="control-btn dislike-btn" id="dislikeBtn">👎</button>
+            <button class="control-btn like-btn" id="likeBtn">👍</button>
+        </div>
+
+        <div class="summary" id="summary">
+            <h2>Your Cat Preferences</h2>
+            <div class="liked-count" id="likedCount">0</div>
+            <p>cats won your heart!</p>
+            <div class="liked-cats" id="likedCats"></div>
+            <button class="restart-btn" id="restartBtn">Find More Cats</button>
+        </div>
+    </div>
+
+    <script>
+        class CatPreferenceApp {
+            constructor() {
+                this.cats = [];
+                this.currentIndex = 0;
+                this.likedCats = [];
+                this.totalCats = 15;
+                this.isDragging = false;
+                this.startX = 0;
+                this.startY = 0;
+                this.currentX = 0;
+                this.currentY = 0;
+                this.currentCard = null;
+                
+                this.init();
+            }
+
+            async init() {
+                await this.loadCats();
+                this.setupEventListeners();
+                this.showFirstCard();
+            }
+
+            async loadCats() {
+                try {
+                    const cats = [];
+                    for (let i = 0; i < this.totalCats; i++) {
+                        cats.push({
+                            id: i,
+                            url: `https://cataas.com/cat?${Date.now()}_${i}`,
+                            name: `Cat ${i + 1}`
+                        });
+                    }
+                    this.cats = cats;
+                    
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('progress').style.display = 'block';
+                    document.getElementById('counter').style.display = 'block';
+                    document.getElementById('cardContainer').style.display = 'flex';
+                    document.getElementById('controls').style.display = 'flex';
+                    document.getElementById('totalCount').textContent = this.totalCats;
+                    
+                } catch (error) {
+                    console.error('Error loading cats:', error);
+                }
+            }
+
+            setupEventListeners() {
+                const likeBtn = document.getElementById('likeBtn');
+                const dislikeBtn = document.getElementById('dislikeBtn');
+                const restartBtn = document.getElementById('restartBtn');
+                const cardContainer = document.getElementById('cardContainer');
+
+                likeBtn.addEventListener('click', () => this.handleLike());
+                dislikeBtn.addEventListener('click', () => this.handleDislike());
+                restartBtn.addEventListener('click', () => this.restart());
+
+                // Touch events for mobile
+                cardContainer.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+                cardContainer.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+                cardContainer.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
+
+                // Mouse events for desktop
+                cardContainer.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+                cardContainer.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                cardContainer.addEventListener('mouseup', (e) => this.handleMouseUp(e));
+                cardContainer.addEventListener('mouseleave', (e) => this.handleMouseUp(e));
+
+                // Keyboard events
+                document.addEventListener('keydown', (e) => {
+                    if (e.key === 'ArrowLeft') this.handleDislike();
+                    if (e.key === 'ArrowRight') this.handleLike();
+                });
+            }
+
+            createCard(cat) {
+                const card = document.createElement('div');
+                card.className = 'cat-card';
+                card.innerHTML = `
+                    <img src="${cat.url}" alt="${cat.name}" class="cat-image" draggable="false">
+                    <div class="cat-info">
+                        <h3>${cat.name}</h3>
+                    </div>
+                `;
+                return card;
+            }
+
+            showFirstCard() {
+                if (this.currentIndex < this.cats.length) {
+                    const cardContainer = document.getElementById('cardContainer');
+                    const card = this.createCard(this.cats[this.currentIndex]);
+                    cardContainer.appendChild(card);
+                    this.currentCard = card;
+                    this.updateProgress();
+                } else {
+                    this.showSummary();
+                }
+            }
+
+            handleLike() {
+                if (this.currentCard) {
+                    this.likedCats.push(this.cats[this.currentIndex]);
+                    this.swipeCard('right');
+                }
+            }
+
+            handleDislike() {
+                if (this.currentCard) {
+                    this.swipeCard('left');
+                }
+            }
+
+            swipeCard(direction) {
+                if (!this.currentCard) return;
+
+                this.currentCard.classList.add(`swiped-${direction}`);
+                
+                setTimeout(() => {
+                    this.currentCard.remove();
+                    this.currentIndex++;
+                    this.showFirstCard();
+                }, 300);
+            }
+
+            updateProgress() {
+                const progress = (this.currentIndex / this.totalCats) * 100;
+                document.getElementById('progressBar').style.width = `${progress}%`;
+                document.getElementById('currentCount').textContent = this.currentIndex;
+            }
+
+            showSummary() {
+                document.getElementById('cardContainer').style.display = 'none';
+                document.getElementById('controls').style.display = 'none';
+                document.getElementById('progress').style.display = 'none';
+                document.getElementById('counter').style.display = 'none';
+                
+                const summary = document.getElementById('summary');
+                summary.classList.add('show');
+                
+                document.getElementById('likedCount').textContent = this.likedCats.length;
+                
+                const likedCatsContainer = document.getElementById('likedCats');
+                likedCatsContainer.innerHTML = '';
+                
+                this.likedCats.forEach(cat => {
+                    const img = document.createElement('img');
+                    img.src = cat.url;
+                    img.alt = cat.name;
+                    img.className = 'liked-cat-thumb';
+                    likedCatsContainer.appendChild(img);
+                });
+            }
+
+            restart() {
+                this.currentIndex = 0;
+                this.likedCats = [];
+                
+                document.getElementById('summary').classList.remove('show');
+                document.getElementById('cardContainer').style.display = 'flex';
+                document.getElementById('controls').style.display = 'flex';
+                document.getElementById('progress').style.display = 'block';
+                document.getElementById('counter').style.display = 'block';
+                
+                this.showFirstCard();
+            }
+
+            // Touch and mouse event handlers
+            handleTouchStart(e) {
+                this.handleStart(e.touches[0].clientX, e.touches[0].clientY);
+                e.preventDefault();
+            }
+
+            handleTouchMove(e) {
+                this.handleMove(e.touches[0].clientX, e.touches[0].clientY);
+                e.preventDefault();
+            }
+
+            handleTouchEnd(e) {
+                this.handleEnd();
+                e.preventDefault();
+            }
+
+            handleMouseDown(e) {
+                this.handleStart(e.clientX, e.clientY);
+                e.preventDefault();
+            }
+
+            handleMouseMove(e) {
+                if (this.isDragging) {
+                    this.handleMove(e.clientX, e.clientY);
+                    e.preventDefault();
+                }
+            }
+
+            handleMouseUp(e) {
+                this.handleEnd();
+            }
+
+            handleStart(x, y) {
+                this.isDragging = true;
+                this.startX = x;
+                this.startY = y;
+                if (this.currentCard) {
+                    this.currentCard.classList.add('dragging');
+                }
+            }
+
+            handleMove(x, y) {
+                if (!this.isDragging || !this.currentCard) return;
+
+                this.currentX = x - this.startX;
+                this.currentY = y - this.startY;
+
+                const rotation = this.currentX * 0.1;
+                this.currentCard.style.transform = `translate(${this.currentX}px, ${this.currentY}px) rotate(${rotation}deg)`;
+                
+                // Show swipe indicators
+                const leftIndicator = document.getElementById('leftIndicator');
+                const rightIndicator = document.getElementById('rightIndicator');
+                
+                if (this.currentX < -50) {
+                    leftIndicator.classList.add('show');
+                    rightIndicator.classList.remove('show');
+                } else if (this.currentX > 50) {
+                    rightIndicator.classList.add('show');
+                    leftIndicator.classList.remove('show');
+                } else {
+                    leftIndicator.classList.remove('show');
+                    rightIndicator.classList.remove('show');
+                }
+            }
+
+            handleEnd() {
+                if (!this.isDragging || !this.currentCard) return;
+
+                this.isDragging = false;
+                this.currentCard.classList.remove('dragging');
+                
+                const leftIndicator = document.getElementById('leftIndicator');
+                const rightIndicator = document.getElementById('rightIndicator');
+                leftIndicator.classList.remove('show');
+                rightIndicator.classList.remove('show');
+
+                if (Math.abs(this.currentX) > 100) {
+                    if (this.currentX > 0) {
+                        this.handleLike();
+                    } else {
+                        this.handleDislike();
+                    }
+                } else {
+                    this.currentCard.style.transform = '';
+                }
+            }
+        }
+
+        // Initialize the app when the page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            new CatPreferenceApp();
+        });
+    </script>
+</body>
+</html>
